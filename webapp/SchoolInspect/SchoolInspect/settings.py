@@ -23,18 +23,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-@(#^z$=wjccy0t(erq!)m1p)!6772856^1wf#f9f67#jcolf1r'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['70.36.107.109']
+ALLOWED_HOSTS = ['halal.shuranewyork.org/']
 
 from decouple import config  
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com') 
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.shuranewyork.org') 
 EMAIL_PORT = config('EMAIL_PORT', cast=int, default=587) 
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool, default=True)  
-EMAIL_HOST_USER = 'sushily2302@gmail.com' 
-EMAIL_HOST_PASSWORD = 'xpzk rvzx ahxm sunb'
+EMAIL_HOST_USER = 'app@shuranewyork.org' 
+EMAIL_HOST_PASSWORD = 'Majl!s1988!'
 # Application definition
 
 INSTALLED_APPS = [
