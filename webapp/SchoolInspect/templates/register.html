@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{% load static %}
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <title>Inspector Registration</title>
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --primary-light: rgba(67, 97, 238, 0.1);
+            --primary-hover: #3a56d4;
+            --secondary-color: #3f37c9;
+            --text-color: #2b2d42;
+            --text-light: #6c757d;
+            --border-color: #dee2e6;
+            --background-color: #f8f9fa;
+            --card-background: #ffffff;
+            --success-color: #38b000;
+            --error-color: #d90429;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--background-color);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-color);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Decorative elements */
+        body::before,
+        body::after {
+            content: "";
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            z-index: -1;
+        }
+
+        body::before {
+            background: linear-gradient(135deg, rgba(67, 97, 238, 0.15), rgba(79, 70, 229, 0.1));
+            top: -150px;
+            left: -150px;
+        }
+
+        body::after {
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(67, 97, 238, 0.1));
+            bottom: -150px;
+            right: -150px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 520px;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .form-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-subtitle {
+            font-size: 0.95rem;
+            color: var(--text-light);
+        }
+
+        .login {
+            background: var(--card-background);
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Decorative shapes */
+        .shape {
+            position: absolute;
+            z-index: 0;
+        }
+
+        .shape-1 {
+            top: -20px;
+            right: -20px;
+            width: 100px;
+            height: 100px;
+            background: var(--primary-light);
+            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+        }
+
+        .shape-2 {
+            bottom: -30px;
+            left: -30px;
+            width: 120px;
+            height: 120px;
+            background: var(--primary-light);
+            border-radius: 43% 57% 70% 30% / 75% 46% 54% 25%;
+        }
+
+        .form-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .form-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .form-steps::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            right: 10%;
+            height: 2px;
+            background: var(--border-color);
+            transform: translateY(-50%);
+            z-index: -1;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .step-number {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .step.active .step-number {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .step-text {
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group label {
+            position: absolute;
+            left: 3rem;
+            top: 0.85rem;
+            font-size: 0.95rem;
+            color: var(--text-light);
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus ~ label,
+        .input-group input:not(:placeholder-shown) ~ label {
+            top: -0.5rem;
+            left: 1rem;
+            font-size: 0.75rem;
+            padding: 0 0.5rem;
+            background: white;
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary-color);
+            font-size: 1.25rem;
+            pointer-events: none;
+            transition: all 0.3s;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 0.85rem 1rem 0.85rem 3rem;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            background: var(--card-background);
+            color: var(--text-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.15);
+            outline: none;
+        }
+
+        .input-group input:focus + i,
+        .input-group select:focus + i {
+            color: var(--secondary-color);
+        }
+
+        .input-group input::placeholder {
+            color: transparent;
+        }
+
+        .checkbox-container {
+            background: rgba(67, 97, 238, 0.05);
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1.5rem 0;
+            border-left: 3px solid var(--primary-color);
+            position: relative;
+        }
+
+        .checkbox-container::before {
+            content: "Role Selection";
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            padding: 0 10px;
+            background: white;
+            color: var(--primary-color);
+            font-weight: 500;
+            font-size: 0.8rem;
+            border-radius: 4px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 1.35rem;
+            height: 1.35rem;
+            border-radius: 6px;
+            border: 2px solid var(--primary-color);
+            background-color: white;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-group input[type="checkbox"]:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .checkbox-group input[type="checkbox"]:checked::after {
+            content: "?";
+            position: absolute;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: bold;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .checkbox-group label {
+            font-size: 1rem;
+            color: var(--text-color);
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: all 0.6s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .err_message {
+            margin-top: 1.25rem;
+        }
+
+        .error {
+            background: rgba(217, 4, 41, 0.08);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            margin-top: 0.5rem;
+            color: var(--error-color);
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            border-left: 3px solid var(--error-color);
+        }
+
+        .error::before {
+            content: "\f071";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            margin-right: 0.75rem;
+            font-size: 1rem;
+        }
+
+        /* Dual input row for first/last name */
+        .input-row {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .input-row .input-group {
+            flex: 1;
+        }
+
+        /* Form elevation effect */
+        .container:hover .login {
+            transform: translateY(-5px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: var(--shadow-lg), 0 15px 25px -7px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Responsive styles */
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .login {
+                padding: 1.75rem;
+            }
+
+            .form-title {
+                font-size: 1.5rem;
+            }
+
+            .input-group input,
+            .input-group select {
+                padding: 0.75rem 1rem 0.75rem 2.75rem;
+            }
+
+            .input-group i {
+                font-size: 1.1rem;
+            }
+            
+            .input-row {
+                flex-direction: column;
+                gap: 0;
+            }
+            
+            .step-text {
+                display: none;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(67, 97, 238, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(67, 97, 238, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(67, 97, 238, 0);
+            }
+        }
+
+        .form-header {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .step.active .step-number {
+            animation: pulse 2s infinite;
+        }
+
+        /* Add new styles for step pages */
+        .step-page {
+            display: none;
+        }
+
+        .step-page.active {
+            display: block;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* Success message styles */
+        .success-message {
+            text-align: center;
+            display: none;
+        }
+
+        .success-message.active {
+            display: block;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .success-icon {
+            font-size: 4rem;
+            color: var(--success-color);
+            margin-bottom: 1rem;
+        }
+
+        .success-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .success-subtitle {
+            font-size: 0.95rem;
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-header">
+            <h1 class="form-title">Inspector Registration</h1>
+            <p class="form-subtitle">Create your account to get started</p>
+        </div>
+        
+        <div class="login">
+            <!-- Decorative shapes -->
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            
+            <!-- Registration steps -->
+            <div class="form-steps">
+                <div class="step active" id="step-1-indicator">
+                    <div class="step-number">1</div>
+                    <div class="step-text">User</div>
+                </div>
+                <div class="step" id="step-2-indicator">
+                    <div class="step-number">2</div>
+                    <div class="step-text">Details</div>
+                </div>
+                <div class="step" id="step-3-indicator">
+                    <div class="step-number">3</div>
+                    <div class="step-text">Protection</div>
+                </div>
+            </div>
+            
+            <div class="form-content">
+                <form method="post" id="registration-form">
+                    {% csrf_token %}
+                    
+                    <!-- Step 1: Account Information -->
+                    <div class="step-page active" id="step-1">
+                        <div class="input-group">
+                            <input type="text" name="username" id="username" placeholder=" " required>
+                            <i class="fas fa-user"></i>
+                            <label for="username">Username</label>
+                        </div>
+                        
+                        <div class="input-group">
+                            <input type="email" name="email" id="email" placeholder=" " required>
+                            <i class="fas fa-envelope"></i>
+                            <label for="email">Email address</label>
+                        </div>
+                        
+                        <button type="button" id="next-to-step-2">Continue</button>
+                    </div>
+                    
+                    <!-- Step 2: Personal Information -->
+                    <div class="step-page" id="step-2">
+                        <div class="input-row">
+                            <div class="input-group">
+                                <input type="text" name="first_name" id="first_name" placeholder=" ">
+                                <i class="fas fa-user-circle"></i>
+                                <label for="first_name">First name</label>
+                            </div>
+                            
+                            <div class="input-group">
+                                <input type="text" name="last_name" id="last_name" placeholder=" ">
+                                <i class="fas fa-user-circle"></i>
+                                <label for="last_name">Last name</label>
+                            </div>
+                        </div>
+                        
+                        <button type="button" id="next-to-step-3">Continue</button>
+                        <button type="button" id="back-to-step-1" style="background: #6c757d; margin-top: 0.5rem;">Back</button>
+                    </div>
+                    
+                    <!-- Step 3: Final Information -->
+                    <div class="step-page" id="step-3">
+                        <div class="input-group">
+                            <input type="password" name="password" id="password" placeholder=" " required>
+                            <i class="fas fa-lock"></i>
+                            <label for="password">Password</label>
+                        </div>
+                        
+                        <div class="input-group">
+                            <input type="text" name="school_name" id="school_name" placeholder=" ">
+                            <i class="fas fa-school"></i>
+                            <label for="school_name">School name</label>
+                        </div>
+                        
+                        <div class="checkbox-container">
+                            <div class="checkbox-group">
+                                <input type="checkbox" name="is_inspector" id="is_inspector">
+                                <label for="is_inspector">Register as Inspector</label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" id="complete-registration">Create Account</button>
+                        <button type="button" id="back-to-step-2" style="background: #6c757d; margin-top: 0.5rem;">Back</button>
+                    </div>
+                </form>
+                
+                <!-- Success message (hidden initially) -->
+                <div class="success-message" id="success-message">
+                    <div class="success-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h2 class="success-title">Registration Complete!</h2>
+                    <p class="success-subtitle">Your account has been created successfully.</p>
+                    <button type="button" id="goto-login">Go to Login</button>
+                </div>
+                
+                <div class="err_message">
+                    {% for msg in messages %}
+                    <p class="error">{{ msg }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM elements
+    const form = document.getElementById('registration-form');
+    const step1 = document.getElementById('step-1');
+    const step2 = document.getElementById('step-2');
+    const step3 = document.getElementById('step-3');
+    const step1Indicator = document.getElementById('step-1-indicator');
+    const step2Indicator = document.getElementById('step-2-indicator');
+    const step3Indicator = document.getElementById('step-3-indicator');
+    const successMessage = document.getElementById('success-message');
+    
+    // Navigation buttons
+    const nextToStep2 = document.getElementById('next-to-step-2');
+    const nextToStep3 = document.getElementById('next-to-step-3');
+    const backToStep1 = document.getElementById('back-to-step-1');
+    const backToStep2 = document.getElementById('back-to-step-2');
+    const completeRegistration = document.getElementById('complete-registration');
+    const gotoLogin = document.getElementById('goto-login');
+    
+    // Input fields for validation
+    const username = document.getElementById('username');
+    const email = document.getElementById('email');
+    const firstName = document.getElementById('first_name');
+    const lastName = document.getElementById('last_name');
+    const password = document.getElementById('password');
+    
+    // Step 1 to Step 2
+    nextToStep2.addEventListener('click', function() {
+        if (username.value.trim() === '' || email.value.trim() === '') {
+            alert('Please fill in all required fields');
+            return;
+        }
+        
+        step1.classList.remove('active');
+        step2.classList.add('active');
+        step1Indicator.classList.remove('active');
+        step2Indicator.classList.add('active');
+    });
+    
+    // Step 2 to Step 3
+    nextToStep3.addEventListener('click', function() {
+        if (firstName.value.trim() === '' || lastName.value.trim() === '') {
+            alert('Please fill in all required fields');
+            return;
+        }
+        
+        step2.classList.remove('active');
+        step3.classList.add('active');
+        step2Indicator.classList.remove('active');
+        step3Indicator.classList.add('active');
+    });
+    
+    // Step 2 back to Step 1
+    backToStep1.addEventListener('click', function() {
+        step2.classList.remove('active');
+        step1.classList.add('active');
+        step2Indicator.classList.remove('active');
+        step1Indicator.classList.add('active');
+    });
+    
+    // Step 3 back to Step 2
+    backToStep2.addEventListener('click', function() {
+        step3.classList.remove('active');
+        step2.classList.add('active');
+        step3Indicator.classList.remove('active');
+        step2Indicator.classList.add('active');
+    });
+    
+    // Form submission
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        
+        // Basic validation for required fields
+        if (username.value.trim() === '' || email.value.trim() === '' || password.value.trim() === '') {
+            alert('Please fill in all required fields');
+            return;
+        }
+        
+        // Submit the form data via AJAX
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                // Hide the form and show success message
+                form.style.display = 'none';
+                successMessage.classList.add('active');
+                
+                // Set a timeout to redirect after 5 seconds
+                // Using root path since login is at '' according to your URL config
+                setTimeout(function() {
+                    window.location.href = "/";  // Redirect to root path which is login
+                }, 5000);
+                
+                // Update the success message to show countdown
+                let countdown = 5;
+                const countdownInterval = setInterval(function() {
+                    countdown--;
+                    const subtitleElement = document.querySelector('.success-subtitle');
+                    if (subtitleElement) {
+                        subtitleElement.textContent = `Your account has been created successfully. Redirecting to login in ${countdown} seconds...`;
+                    }
+                    
+                    if (countdown <= 0) {
+                        clearInterval(countdownInterval);
+                    }
+                }, 1000);
+            } else {
+                // Handle server errors
+                console.error('Server error:', response.status);
+                alert('There was a problem with your registration. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('There was a problem with your registration. Please try again.');
+        });
+    });
+    
+    // Manual redirect to login page for the button
+    gotoLogin.addEventListener('click', function() {
+        window.location.href = "/";  // Redirect to root path which is login
+    });
+    
+    // Add visual feedback for form interactions
+    const allInputs = document.querySelectorAll('input');
+    allInputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.style.transform = 'translateY(-2px)';
+            this.parentElement.style.transition = 'transform 0.3s ease';
+        });
+        
+        input.addEventListener('blur', function() {
+            this.parentElement.style.transform = 'translateY(0)';
+        });
+    });
+});
+    </script>
+</body>
+</html>

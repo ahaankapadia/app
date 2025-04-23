@@ -1,0 +1,1573 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Halal Inspection Form</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'CSS/inspection_form.css' %}">
+    <style>
+        button.form-switch-btn {
+          background-image: linear-gradient(#42A1EC, #0070C9);
+          border: 1px solid #0077CC;
+          border-radius: 4px;
+          box-sizing: border-box;
+          color: #FFFFFF;
+          cursor: pointer;
+          direction: ltr;
+          display: block;
+          font-family: "SF Pro Text","SF Pro Icons","AOS Icons","Helvetica Neue",Helvetica,Arial,sans-serif;
+          font-size: 17px;
+          font-weight: 400;
+          letter-spacing: -.022em;
+          line-height: 1.47059;
+          min-width: 30px;
+          overflow: visible;
+          padding: 4px 15px;
+          text-align: center;
+          vertical-align: baseline;
+          user-select: none;
+          -webkit-user-select: none;
+          touch-action: manipulation;
+          white-space: nowrap;
+        }
+        
+        button.form-switch-btn:disabled {
+          cursor: default;
+          opacity: .3;
+        }
+        
+        button.form-switch-btn:hover {
+          background-image: linear-gradient(#51A9EE, #147BCD);
+          border-color: #1482D0;
+          text-decoration: none;
+        }
+        
+        button.form-switch-btn:active {
+          background-image: linear-gradient(#3D94D9, #0067B9);
+          border-color: #006DBC;
+          outline: none;
+        }
+        
+        button.form-switch-btn:focus {
+          box-shadow: rgba(131, 192, 253, 0.5) 0 0 0 3px;
+          outline: none;
+        }   
+     /* Hide school code column by its class name */
+    .school-code-column {
+        display: none;
+    }
+    
+    /* Alternative approach if you know the column index */
+    /* For example, if school code is the first column: */
+    table.staff-roster-table th:nth-child(1),
+    table.staff-roster-table td:nth-child(1),
+    table.machine-inspection-table th:nth-child(1),
+    table.machine-inspection-table td:nth-child(1),
+    table.utensils-inspection-table th:nth-child(1),
+    table.utensils-inspection-table td:nth-child(1) {
+        display: none;
+    } 
+    </style>
+    <!-- Flatpickr CSS and JS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        flatpickr(".timepicker", {
+            enableTime: true,
+            noCalendar: true,
+            time_24hr: false,               // Show 12-hour clock (with AM/PM)
+            dateFormat: "H:i",              // Submit as 24-hour format (Django expects this)
+            altInput: true,
+            altFormat: "h:i K",             // Display 12-hour with AM/PM
+            minuteIncrement: 15
+        });
+    });
+    </script>
+</head>
+<body>
+ {% load custom_filters %}
+    <div class="page-header">
+        <a href="{% url 'logout' %}" class="btn btn-outline-danger">
+                <i class="fas fa-sign-out-alt me-2"></i>Logout
+        </a>
+        <div class="container text-center">
+            <h2><i class="fas fa-clipboard-check me-2"></i>Inspection Form</h2>
+            <p class="subtitle">Complete and accurate inspections for halal compliance</p>
+        </div>
+    </div>
+    <a href="{% url 'inspection_step' step=1 %}" class="enroll-button">
+        <i class="fas fa-plus"></i>
+        New Inspection
+    </a>
+    <div class="container">
+        
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        <div class="form-container">
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-search"></i>
+                    Load Existing Inspection
+                </div>
+                <form method="get" class="mb-4" action="{% url 'inspection_form' %}">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <input type="text" class="form-control" 
+                                   placeholder="Enter School SF Code" 
+                                   id="school_code" 
+                                   name="school_code" 
+                                   required 
+                                   {% if school %}value="{{ school.school_code }}"{% endif %}>
+                        </div>
+                        <div class="col-sm-4">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-2"></i>Load
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Nav tabs -->
+            <ul class="nav nav-tabs" id="inspectionTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="school-tab" data-bs-toggle="tab"
+                        data-bs-target="#school-inspection" type="button" role="tab">
+                        School Inspection
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="delivery-tab" data-bs-toggle="tab"
+                        data-bs-target="#delivery-inspection" type="button" role="tab">
+                        Delivery Inspection
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="freezer-tab" data-bs-toggle="tab" data-bs-target="#freezer-inspection"
+                        type="button" role="tab">
+                        Freezer Inspection
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="preparation-tab" data-bs-toggle="tab" data-bs-target="#preparation-inspection"
+                        type="button" role="tab">
+                        Preparation Inspection
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="utensils-tab" data-bs-toggle="tab" data-bs-target="#utensils-inspection"
+                        type="button" role="tab">
+                        Utensils Inspection
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="machine-tab" data-bs-toggle="tab" data-bs-target="#machine-inspection"
+                        type="button" role="tab">
+                        Machine Inspection
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="serving-tab" data-bs-toggle="tab" data-bs-target="#serving-inspection"
+                        type="button" role="tab">
+                        Serving Inspection
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="storage-tab" data-bs-toggle="tab" data-bs-target="#storage-inspection"
+                        type="button" role="tab">
+                        Storage Inspection
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="bathroom-tab" data-bs-toggle="tab" data-bs-target="#bathroom-inspection"
+                        type="button" role="tab">
+                        Bathroom Inspection
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="records-tab" data-bs-toggle="tab" data-bs-target="#records-inspection"
+                        type="button" role="tab">
+                        Records Inspection
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="evaluation-tab" data-bs-toggle="tab" data-bs-target="#evaluation-inspection"
+                        type="button" role="tab">
+                        Evaluation Inspection
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="training-tab" data-bs-toggle="tab" data-bs-target="#training-inspection"
+                        type="button" role="tab">
+                        Training Inspection
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="staffroster-tab" data-bs-toggle="tab" data-bs-target="#staffroster-inspection"
+                        type="button" role="tab">
+                        Staff Roster Inspection
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="contamination-tab" data-bs-toggle="tab" data-bs-target="#contamination-inspection"
+                        type="button" role="tab">
+                        Contamination Inspection
+                    </button>
+                </li>
+            </ul>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+
+                            <!-- Tab Content -->
+                            <div class="tab-content" id="inspectionTabContent">
+                                <!-- School Inspection Tab -->
+                                <div class="tab-pane fade show active" id="school-inspection" role="tabpanel">
+                                    <div class="form-section">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div class="form-section-title"><i class="fas fa-info-circle"></i>School Inspection Forms</div>
+                                            <button class="form-switch-btn" onclick="switchFormView('school')">
+                                                Switch to {% if request.session.school_form_view == 'checklist' %}Detailed{% else %}Checklist{% endif %}
+                                            </button>
+                                        </div>
+
+                                        <!-- Detailed Form -->
+                                        <form class="col-sm-9" method="post" id="school_detailed_form" 
+                                              {% if request.session.school_form_view == 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in school_inspection_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="school_form_type" value="detailed">
+                                            <button type="submit" name="school_inspection_submit" class="btn btn-primary mt-3">
+                                                Save School Inspection
+                                            </button>
+                                        </form>
+
+                                        <!-- Checklist Form -->
+                                        <form method="post" id="school_checklist_form" 
+                                              {% if request.session.school_form_view != 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in school_checklist_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="school_form_type" value="checklist">
+                                            <button type="submit" name="school_inspection_submit" class="btn btn-primary mt-3">
+                                                Save School Checklist
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <!-- Delivery Inspection Tab -->
+                                <div class="tab-pane fade" id="delivery-inspection" role="tabpanel">
+                                    <div class="form-section">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div class="form-section-title">
+                                                  <i class="fas fa-truck"></i>Delivery Inspection Forms</div>
+                                            <button class="form-switch-btn" onclick="switchFormView('delivery')">
+                                                Switch to {% if request.session.delivery_form_view == 'checklist' %}Detailed{% else %}Checklist{% endif %}
+                                            </button>
+                                        </div>
+
+                                        <!-- Detailed Form -->
+                                        <form method="post" id="delivery_detailed_form" 
+                                              {% if request.session.delivery_form_view == 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in delivery_inspection_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="delivery_form_type" value="detailed">
+                                            <button type="submit" name="delivery_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Delivery Inspection
+                                            </button>
+                                        </form>
+
+                                        <!-- Checklist Form -->
+                                        <form method="post" id="delivery_checklist_form" 
+                                              {% if request.session.delivery_form_view != 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in delivery_checklist_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="delivery_form_type" value="checklist">
+                                            <button type="submit" name="delivery_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Delivery Checklist
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <!-- Freezer Inspection Tab -->
+                                <div class="tab-pane fade" id="freezer-inspection" role="tabpanel">
+                                    <div class="form-section">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                         <div class="form-section-title">
+                                              <i class="fas fa-snowflake"></i>
+                                              Refrigerator and Freezer Inspection
+                                          </div>
+                                            <button class="form-switch-btn" onclick="switchFormView('freezer')">
+                                                Switch to {% if request.session.freezer_form_view == 'checklist' %}Detailed{% else %}Checklist{% endif %}
+                                            </button>
+                                        </div>
+
+                                        <!-- Detailed Form -->
+                                        <form method="post" id="freezer_detailed_form" 
+                                              {% if request.session.freezer_form_view == 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in freezer_inspection_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="freezer_form_type" value="detailed">
+                                            <button type="submit" name="freezer_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Freezer Inspection
+                                            </button>
+                                        </form>
+
+                                        <!-- Checklist Form -->
+                                        <form method="post" id="freezer_checklist_form" 
+                                              {% if request.session.freezer_form_view != 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in freezer_checklist_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="freezer_form_type" value="checklist">
+                                            <button type="submit" name="freezer_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Freezer Checklist
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                
+                                <!-- Preparation Inspection Tab -->
+                                <div class="tab-pane fade" id="preparation-inspection" role="tabpanel">
+                                    <div class="form-section">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="form-section-title">
+                                            <i class="fas fa-utensils"></i>
+                                            Preparation Inspection
+                                        </div>
+                                            <button class="form-switch-btn" onclick="switchFormView('preparation')">
+                                                Switch to {% if request.session.preparation_form_view == 'checklist' %}Detailed{% else %}Checklist{% endif %}
+                                            </button>
+                                        </div>
+                                
+                                        <!-- Detailed Form -->
+                                        <form method="post" id="preparation_detailed_form" 
+                                              {% if request.session.preparation_form_view == 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in preparation_inspection_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="preparation_form_type" value="detailed">
+                                            <button type="submit" name="preparation_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Preparation Inspection
+                                            </button>
+                                        </form>
+                                
+                                        <!-- Checklist Form -->
+                                        <form method="post" id="preparation_checklist_form" 
+                                              {% if request.session.preparation_form_view != 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in preparation_checklist_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="preparation_form_type" value="checklist">
+                                            <button type="submit" name="preparation_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Preparation Checklist
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <div class="tab-pane fade" id="utensils-inspection" role="tabpanel">
+                                    <div class="form-section">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div class="form-section-title">
+                                                <i class="fas fa-utensils"></i>
+                                                Utensils Inspection
+                                            </div>
+                                        </div>
+                                
+                                        <!-- Detailed Form -->
+                                        <form method="post" id="utensils_inspection_form">
+                                            {% csrf_token %}
+                                            {{ utensils_inspection_formset.management_form }}
+                                            
+                                            <div class="table-responsive">
+                                                <table class="table table-bordered utensils-inspection-table">
+                                                    <thead>
+                                                        <tr>
+                                                            {% for field in utensils_inspection_formset.0.visible_fields %}
+                                                                <th>
+                                                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                                </th>
+                                                            {% endfor %}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for form in utensils_inspection_formset %}
+                                                            <tr class="utensils-entry {% if forloop.counter > utensils_inspection_formset|length %}d-none collapsed-row{% endif %}">
+                                                                {% for field in form.visible_fields %}
+                                                                    <td>
+                                                                        {{ field|add_class:"form-control" }}
+                                                                        {% if field.errors %}
+                                                                            <div class="invalid-feedback d-block">
+                                                                                {% for error in field.errors %}
+                                                                                    {{ error }}
+                                                                                {% endfor %}
+                                                                            </div>
+                                                                        {% endif %}
+                                                                    </td>
+                                                                {% endfor %}
+                                                                {% for hidden in form.hidden_fields %}
+                                                                    {{ hidden }}
+                                                                {% endfor %}
+                                                            </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <button type="button" id="show-more-utensils" class="btn btn-sm btn-info mt-2">
+                                                <i class="fas fa-plus-circle"></i> Add More
+                                            </button>
+                                            <button type="submit" name="utensils_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Utensils Inspection
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <div class="tab-pane fade" id="machine-inspection" role="tabpanel">
+                                    <div class="form-section">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div class="form-section-title">
+                                                <i class="fas fa-cogs"></i>
+                                                Machine Inspection
+                                            </div>
+                                        </div>
+                                
+                                        <!-- Detailed Form -->
+                                        <form method="post" id="machine_inspection_form">
+                                            {% csrf_token %}
+                                            {{ machine_inspection_formset.management_form }}
+                                            
+                                            <div class="table-responsive">
+                                                <table class="table table-bordered machine-inspection-table">
+                                                    <thead>
+                                                        <tr>
+                                                            {% for field in machine_inspection_formset.0.visible_fields %}
+                                                                <th>
+                                                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                                </th>
+                                                            {% endfor %}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for form in machine_inspection_formset %}
+                                                            <tr class="machine-entry {% if forloop.counter > machine_inspection_formset|length %}d-none collapsed-row{% endif %}">
+                                                                {% for field in form.visible_fields %}
+                                                                    <td>
+                                                                        {{ field|add_class:"form-control" }}
+                                                                        {% if field.errors %}
+                                                                            <div class="invalid-feedback d-block">
+                                                                                {% for error in field.errors %}
+                                                                                    {{ error }}
+                                                                                {% endfor %}
+                                                                            </div>
+                                                                        {% endif %}
+                                                                    </td>
+                                                                {% endfor %}
+                                                                {% for hidden in form.hidden_fields %}
+                                                                    {{ hidden }}
+                                                                {% endfor %}
+                                                            </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <button type="button" id="show-more-machine" class="btn btn-sm btn-info mt-2">
+                                                <i class="fas fa-plus-circle"></i> Add More
+                                            </button>
+                                            <button type="submit" name="machine_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Machine Inspection
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                
+                                <div class="tab-pane fade" id="serving-inspection" role="tabpanel">
+                                    <div class="form-section">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="form-section-title">
+                                            <i class="fas fa-concierge-bell"></i>
+                                            Serving Line Inspection
+                                        </div>
+                                            <button class="form-switch-btn" onclick="switchFormView('serving')">
+                                                Switch to {% if request.session.serving_form_view == 'checklist' %}Detailed{% else %}Checklist{% endif %}
+                                            </button>
+                                        </div>
+                                
+                                        <!-- Detailed Form -->
+                                        <form method="post" id="serving_detailed_form" 
+                                              {% if request.session.serving_form_view == 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in serving_inspection_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="serving_form_type" value="detailed">
+                                            <button type="submit" name="serving_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Serving Inspection
+                                            </button>
+                                        </form>
+                                
+                                        <!-- Checklist Form -->
+                                        <form method="post" id="serving_checklist_form" 
+                                              {% if request.session.serving_form_view != 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in serving_checklist_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="serving_form_type" value="checklist">
+                                            <button type="submit" name="serving_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Serving Checklist
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                                               
+                                <div class="tab-pane fade" id="storage-inspection" role="tabpanel">
+                                    <div class="form-section">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="form-section-title">
+                                            <i class="fas fa-warehouse"></i>
+                                            Storage Inspection
+                                        </div>
+                                            <button class="form-switch-btn" onclick="switchFormView('storage')">
+                                                Switch to {% if request.session.storage_form_view == 'checklist' %}Detailed{% else %}Checklist{% endif %}
+                                            </button>
+                                        </div>
+                                
+                                        <!-- Detailed Form -->
+                                        <form method="post" id="storage_detailed_form" 
+                                              {% if request.session.storage_form_view == 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in storage_inspection_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="storage_form_type" value="detailed">
+                                            <button type="submit" name="storage_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Storage Inspection
+                                            </button>
+                                        </form>
+                                
+                                        <!-- Checklist Form -->
+                                        <form method="post" id="storage_checklist_form" 
+                                              {% if request.session.storage_form_view != 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in storage_checklist_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="storage_form_type" value="checklist">
+                                            <button type="submit" name="storage_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Storage Checklist
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <div class="tab-pane fade" id="bathroom-inspection" role="tabpanel">
+                                    <div class="form-section">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="form-section-title">
+                                            <i class="fas fa-toilet"></i>
+                                            Bathroom Inspection
+                                        </div>
+                                            <button class="form-switch-btn" onclick="switchFormView('bathroom')">
+                                                Switch to {% if request.session.bathroom_form_view == 'checklist' %}Detailed{% else %}Checklist{% endif %}
+                                            </button>
+                                        </div>
+                                
+                                        <!-- Detailed Form -->
+                                        <form method="post" id="bathroom_detailed_form" 
+                                              {% if request.session.bathroom_form_view == 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in bathroom_inspection_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="bathroom_form_type" value="detailed">
+                                            <button type="submit" name="bathroom_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Bathroom Inspection
+                                            </button>
+                                        </form>
+                                
+                                        <!-- Checklist Form -->
+                                        <form method="post" id="bathroom_checklist_form" 
+                                              {% if request.session.bathroom_form_view != 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in bathroom_checklist_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="bathroom_form_type" value="checklist">
+                                            <button type="submit" name="bathroom_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Bathroom Checklist
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                
+                                <div class="tab-pane fade" id="records-inspection" role="tabpanel">
+                                    <div class="form-section">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="form-section-title">
+                                            <i class="fas fa-toilet"></i>
+                                            Records Inspection
+                                        </div>
+                                            <button class="form-switch-btn" onclick="switchFormView('records')">
+                                                Switch to {% if request.session.bathroom_form_view == 'checklist' %}Detailed{% else %}Checklist{% endif %}
+                                            </button>
+                                        </div>
+                                
+                                        <!-- Detailed Form -->
+                                        <form method="post" id="records_detailed_form" 
+                                              {% if request.session.records_form_view == 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in records_inspection_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="records_form_type" value="detailed">
+                                            <button type="submit" name="records_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Records Inspection
+                                            </button>
+                                        </form>
+                                
+                                        <!-- Checklist Form -->
+                                        <form method="post" id="records_checklist_form" 
+                                              {% if request.session.records_form_view != 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in records_checklist_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="records_form_type" value="checklist">
+                                            <button type="submit" name="records_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Records Checklist
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                
+                                <div class="tab-pane fade" id="evaluation-inspection" role="tabpanel">
+                                    <div class="form-section">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="form-section-title">
+                                            <i class="fas fa-toilet"></i>
+                                            Evaluation Inspection
+                                        </div>
+                                            <button class="form-switch-btn" onclick="switchFormView('evaluation')">
+                                                Switch to {% if request.session.evaluation_form_view == 'checklist' %}Detailed{% else %}Checklist{% endif %}
+                                            </button>
+                                        </div>
+                                
+                                        <!-- Detailed Form -->
+                                        <form method="post" id="evaluation_detailed_form" 
+                                              {% if request.session.evaluation_form_view == 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in evaluation_inspection_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="evaluation_form_type" value="detailed">
+                                            <button type="submit" name="evaluation_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Evaluation Inspection
+                                            </button>
+                                        </form>
+                                
+                                        <!-- Checklist Form -->
+                                        <form method="post" id="evaluation_checklist_form" 
+                                              {% if request.session.evaluation_form_view != 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in evaluation_checklist_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="evaluation_form_type" value="checklist">
+                                            <button type="submit" name="evaluation_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Evaluation Checklist
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>                                
+                                                                
+                                <div class="tab-pane fade" id="training-inspection" role="tabpanel">
+                                    <div class="form-section">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="form-section-title">
+                                            <i class="fas fa-file-alt"></i>
+                                            Training Inspection
+                                        </div>
+                                            <button class="form-switch-btn" onclick="switchFormView('training')">
+                                                Switch to {% if request.session.training_form_view == 'checklist' %}Detailed{% else %}Checklist{% endif %}
+                                            </button>
+                                        </div>
+                                
+                                        <!-- Detailed Form -->
+                                        <form method="post" id="training_detailed_form" 
+                                              {% if request.session.training_form_view == 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in training_inspection_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="training_form_type" value="detailed">
+                                            <button type="submit" name="training_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Training Inspection
+                                            </button>
+                                        </form>
+                                
+                                        <!-- Checklist Form -->
+                                        <form method="post" id="training_checklist_form" 
+                                              {% if request.session.training_form_view != 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in training_checklist_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="training_form_type" value="checklist">
+                                            <button type="submit" name="training_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Training Checklist
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <div class="tab-pane fade" id="staffroster-inspection" role="tabpanel">
+                                    <div class="form-section">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div class="form-section-title">
+                                                <i class="fas fa-file-alt"></i>
+                                                Staff Roster Inspection
+                                            </div>
+                                        </div>
+                                
+                                        <!-- Detailed Form -->
+                                        <form method="post" id="staffroster_detailed_form">
+                                            {% csrf_token %}
+                                            {{ staffroster_inspection_formset.management_form }}
+                                            
+                                            <div class="table-responsive">
+                                                <table class="table table-bordered staff-roster-table">
+                                                    <thead>
+                                                        <tr>
+                                                            {% for field in staffroster_inspection_formset.0.visible_fields %}
+                                                                <th>
+                                                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                                </th>
+                                                            {% endfor %}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for form in staffroster_inspection_formset %}
+                                                            <tr class="staff-entry {% if forloop.counter > 5 %}d-none collapsed-row{% endif %}">
+                                                                {% for field in form.visible_fields %}
+                                                                    <td>
+                                                                        {{ field|add_class:"form-control" }}
+                                                                        {% if field.errors %}
+                                                                            <div class="invalid-feedback d-block">
+                                                                                {% for error in field.errors %}
+                                                                                    {{ error }}
+                                                                                {% endfor %}
+                                                                            </div>
+                                                                        {% endif %}
+                                                                    </td>
+                                                                {% endfor %}
+                                                                {% for hidden in form.hidden_fields %}
+                                                                    {{ hidden }}
+                                                                {% endfor %}
+                                                            </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="staffroster_form_type" value="detailed">
+                                            <button type="button" id="show-more-staff" class="btn btn-sm btn-info mt-2">
+                                                <i class="fas fa-plus-circle"></i> Add More
+                                            </button>
+                                            <button type="submit" name="staffroster_inspection_submit" class="btn btn-primary mt-3">
+                                                Save StaffRoster Inspection
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                                              
+                                <div class="tab-pane fade" id="contamination-inspection" role="tabpanel">
+                                    <div class="form-section">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="form-section-title">
+                                            <i class="fas fa-chalkboard-teacher"></i>
+                                            Contamination Inspection
+                                        </div>
+                                            <button class="form-switch-btn" onclick="switchFormView('contamination')">
+                                                Switch to {% if request.session.contamination_form_view == 'checklist' %}Detailed{% else %}Checklist{% endif %}
+                                            </button>
+                                        </div>
+                                
+                                        <!-- Detailed Form -->
+                                        <form method="post" id="contamination_detailed_form" 
+                                              {% if request.session.contamination_form_view == 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in contamination_inspection_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="contamination_form_type" value="detailed">
+                                            <button type="submit" name="contamination_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Contamination Inspection
+                                            </button>
+                                        </form>
+                                
+                                        <!-- Checklist Form -->
+                                        <form method="post" id="contamination_checklist_form" 
+                                              {% if request.session.contamination_form_view != 'checklist' %}style="display:none;"{% endif %}>
+                                            {% csrf_token %}
+                                            {% for field in contamination_checklist_form %}
+                                            <div class="row mb-3">
+                                                <label for="{{ field.id_for_label }}" class="col-sm-3 col-form-label">{{ field.label }}</label>
+                                                <div class="col-sm-9">
+                                                    {{ field|add_class:"form-control" }}
+                                                    {% if field.help_text %}
+                                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if field.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {% for error in field.errors %}
+                                                        {{ error }}
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            <input type="hidden" name="school_code" value="{{ school.school_code }}">
+                                            <input type="hidden" name="contamination_form_type" value="checklist">
+                                            <button type="submit" name="contamination_inspection_submit" class="btn btn-primary mt-3">
+                                                Save Contamination Checklist
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function switchFormView(type) {
+        // Get current form views
+        const detailedFormId = `${type}_detailed_form`;
+        const checklistFormId = `${type}_checklist_form`;
+        
+        // Toggle form visibility
+        const detailedForm = document.getElementById(detailedFormId);
+        const checklistForm = document.getElementById(checklistFormId);
+        
+        // Toggle display
+        if (detailedForm.style.display !== 'none') {
+            detailedForm.style.display = 'none';
+            checklistForm.style.display = 'block';
+            
+            // Send AJAX request to update session
+            fetch('/update_form_view/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    form_type: type,
+                    view: 'checklist'
+                })
+            });
+        } else {
+            detailedForm.style.display = 'block';
+            checklistForm.style.display = 'none';
+            
+            // Send AJAX request to update session
+            fetch('/update_form_view/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    form_type: type,
+                    view: 'detailed'
+                })
+            });
+        }
+    }
+    </script>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Staff Roster add more functionality
+    setupAddMoreButton('show-more-staff', 'staffroster_inspection_form', '.staff-roster-table tbody');
+    
+    // Machine Inspection add more functionality
+    setupAddMoreButton('show-more-machine', 'machine_inspection_form', '.machine-inspection-table tbody');
+    
+    // Utensils Inspection add more functionality
+    setupAddMoreButton('show-more-utensils', 'utensils_inspection_form', '.utensils-inspection-table tbody');
+    
+    /**
+     * Sets up the "Add More" button functionality for a formset
+     * @param {string} buttonId - The ID of the "Add More" button
+     * @param {string} formId - The ID of the form containing the formset
+     * @param {string} tbodySelector - The selector for the tbody element
+     */
+    function setupAddMoreButton(buttonId, formId, tbodySelector) {
+        const addMoreBtn = document.getElementById(buttonId);
+        if (addMoreBtn) {
+            console.log(`${buttonId} button found`);
+            
+            addMoreBtn.addEventListener('click', function() {
+                console.log(`${buttonId} clicked`);
+                
+                // Show all hidden rows first
+                const hiddenRows = document.querySelectorAll(`${tbodySelector} .collapsed-row`);
+                let allShown = true;
+                
+                console.log(`Hidden rows found for ${buttonId}:`, hiddenRows.length);
+                
+                // Check if there are any hidden rows to show first
+                hiddenRows.forEach(function(row) {
+                    if (row.classList.contains('d-none')) {
+                        row.classList.remove('d-none');
+                        allShown = false;
+                        console.log(`Showing hidden row for ${buttonId}`);
+                        return;
+                    }
+                });
+                
+                // If all rows are already visible, we need to dynamically add more
+                if (allShown) {
+                    console.log(`All rows shown for ${buttonId}, adding new row`);
+                    addMoreRows(formId, tbodySelector);
+                }
+            });
+        } else {
+            console.log(`${buttonId} button not found`);
+        }
+    }
+    
+    /**
+     * Adds a new row to a formset table
+     * @param {string} formId - The ID of the form containing the formset
+     * @param {string} tbodySelector - The selector for the tbody element
+     */
+    function addMoreRows(formId, tbodySelector) {
+        console.log(`Adding rows to ${formId} at ${tbodySelector}`);
+        
+        // Find the form
+        const targetForm = document.getElementById(formId);
+        if (!targetForm) {
+            console.error(`Form with ID ${formId} not found`);
+            return;
+        }
+        
+        // Get the management form for total forms count
+        const totalFormsInput = targetForm.querySelector('[name$=TOTAL_FORMS]');
+        if (!totalFormsInput) {
+            console.error(`Management form not found in ${formId}`);
+            return;
+        }
+        
+        const currentFormCount = parseInt(totalFormsInput.value);
+        console.log(`Current form count for ${formId}: ${currentFormCount}`);
+        
+        // Get template row (first row in tbody)
+        const tbody = document.querySelector(tbodySelector);
+        if (!tbody) {
+            console.error(`Tbody selector ${tbodySelector} not found`);
+            return;
+        }
+        
+        const firstRow = tbody.querySelector('tr');
+        if (!firstRow) {
+            console.error(`No rows found in tbody for ${formId}`);
+            return;
+        }
+        
+        const templateRow = firstRow.cloneNode(true);
+        
+        // Get school code from the hidden input field
+        const schoolCodeInput = document.querySelector('input[name="school_code"]');
+        if (!schoolCodeInput) {
+            console.error("School code input not found");
+            return;
+        }
+        
+        const schoolCode = schoolCodeInput.value;
+        console.log(`School code for ${formId}: ${schoolCode}`);
+        
+        // Update IDs and names in the new row
+        const inputs = templateRow.querySelectorAll('input, select, textarea');
+        inputs.forEach(function(input) {
+            const oldName = input.getAttribute('name');
+            const oldId = input.getAttribute('id');
+            
+            if (oldName) {
+                // Handle different naming patterns
+                let newName;
+                if (oldName.match(/form-\d+-/)) {
+                    // Standard Django formset naming: form-0-field_name
+                    newName = oldName.replace(/form-\d+-/, `form-${currentFormCount}-`);
+                } else {
+                    // Try to handle any other pattern by replacing the first number
+                    newName = oldName.replace(/\d+/, currentFormCount);
+                }
+                
+                input.setAttribute('name', newName);
+                console.log(`Updated name from ${oldName} to ${newName}`);
+                
+                // Clear the value for most fields
+                if (!newName.endsWith('-school') && !newName.includes('-id')) {
+                    input.value = '';
+                }
+                
+                // Handle specific field types
+                if (newName.endsWith('-school')) {
+                    input.value = schoolCode;
+                    console.log(`Set school value to ${schoolCode}`);
+                }
+                
+                if (newName.includes('-id')) {
+                    input.value = '';
+                    console.log("Cleared ID field");
+                }
+            }
+            
+            if (oldId) {
+                // Handle different ID patterns
+                let newId;
+                if (oldId.match(/id_form-\d+-/)) {
+                    // Standard Django formset ID: id_form-0-field_name
+                    newId = oldId.replace(/id_form-\d+-/, `id_form-${currentFormCount}-`);
+                } else {
+                    // Try to handle any other pattern
+                    newId = oldId.replace(/\d+/, currentFormCount);
+                }
+                
+                input.setAttribute('id', newId);
+                console.log(`Updated ID from ${oldId} to ${newId}`);
+            }
+            
+            // Reset special input types
+            if (input.type === 'checkbox' || input.type === 'radio') {
+                input.checked = false;
+            } else if (input.tagName === 'SELECT') {
+                if (input.options.length > 0) {
+                    input.selectedIndex = 0;
+                }
+            }
+        });
+        
+        // Handle any labels in the row
+        const labels = templateRow.querySelectorAll('label');
+        labels.forEach(function(label) {
+            const oldFor = label.getAttribute('for');
+            if (oldFor) {
+                // Update the 'for' attribute to match the new input IDs
+                let newFor;
+                if (oldFor.match(/id_form-\d+-/)) {
+                    newFor = oldFor.replace(/id_form-\d+-/, `id_form-${currentFormCount}-`);
+                } else {
+                    newFor = oldFor.replace(/\d+/, currentFormCount);
+                }
+                
+                label.setAttribute('for', newFor);
+                console.log(`Updated label for from ${oldFor} to ${newFor}`);
+            }
+        });
+        
+        // Remove any 'collapsed-row' or 'd-none' classes from the new row
+        templateRow.classList.remove('collapsed-row', 'd-none');
+        
+        // Add the new row to the table
+        tbody.appendChild(templateRow);
+        console.log(`Added new row to ${formId} table`);
+        
+        // Update the total forms count
+        totalFormsInput.value = currentFormCount + 1;
+        console.log(`Updated total forms to ${currentFormCount + 1} for ${formId}`);
+    }
+});
+    </script>
+    <script>
+
+            // Enable tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Add smooth scroll behavior
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+
+            // Add form validation
+            form.addEventListener('submit', function (e) {
+                if (!form.checkValidity()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // Find the first invalid input and switch to its tab
+                    const invalidInput = form.querySelector(':invalid');
+                    if (invalidInput) {
+                        const tabPane = invalidInput.closest('.tab-pane');
+                        if (tabPane) {
+                            const tabId = tabPane.id;
+                            const tab = document.querySelector(`[data-bs-target="#${tabId}"]`);
+                            if (tab) {
+                                bootstrap.Tab.getInstance(tab).show();
+                                invalidInput.focus();
+                            }
+                        }
+                    }
+                }
+                form.classList.add('was-validated');
+            });
+
+            // Help button functionality
+            const helpButton = document.querySelector('.floating-help');
+            helpButton.addEventListener('click', function () {
+                alert('Need help? Contact support at help@halalinspection.org or call (123) 456-7890');
+            });
+
+            // Tab persistence
+            const lastActiveTab = localStorage.getItem('lastActiveTab');
+            if (lastActiveTab) {
+                const tab = document.querySelector(`[data-bs-target="${lastActiveTab}"]`);
+                if (tab) {
+                    const bsTab = new bootstrap.Tab(tab);
+                    bsTab.show();
+                }
+            }
+
+            // Store the active tab
+            const tabEls = document.querySelectorAll('button[data-bs-toggle="tab"]');
+            tabEls.forEach(tabEl => {
+                tabEl.addEventListener('shown.bs.tab', function (e) {
+                    localStorage.setItem('lastActiveTab', e.target.getAttribute('data-bs-target'));
+                });
+            });
+        });
+
+        // Responsive form layout adjustments
+        function adjustFormLayout() {
+            const screenWidth = window.innerWidth;
+            const formLabels = document.querySelectorAll('.col-form-label');
+            const formControls = document.querySelectorAll('.col-sm-9');
+
+            if (screenWidth < 576) {
+                formLabels.forEach(label => {
+                    label.classList.remove('col-sm-3');
+                    label.classList.add('col-12', 'mb-1');
+                });
+
+                formControls.forEach(control => {
+                    control.classList.remove('col-sm-9');
+                    control.classList.add('col-12');
+                });
+            } else {
+                formLabels.forEach(label => {
+                    label.classList.remove('col-12', 'mb-1');
+                    label.classList.add('col-sm-3');
+                });
+
+                formControls.forEach(control => {
+                    control.classList.remove('col-12');
+                    control.classList.add('col-sm-9');
+                });
+            }
+        }
+
+        // Call on load and resize
+        window.addEventListener('load', adjustFormLayout);
+        window.addEventListener('resize', adjustFormLayout);
+
+        // Scroll tabs into view when activated
+        document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function (e) {
+                e.target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'center'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

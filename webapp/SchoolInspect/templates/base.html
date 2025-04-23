@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Halal Inspection Checklist - {{ step_title }}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">Halal Inspection Checklist</h1>
+        
+        <!-- Progress bar -->
+        <div class="progress mb-4">
+            <div class="progress-bar" role="progressbar" style="width: {{ progress_percentage }}%;" 
+                 aria-valuenow="{{ progress_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                {{ progress_percentage|floatformat:0 }}%
+            </div>
+        </div>
+        
+        <!-- Step navigation -->
+        <div class="d-flex justify-content-between mb-4">
+            {% for step_num in step_numbers %}
+                <a href="{% url 'checklist_step' step=step_num %}" 
+                   class="btn btn-sm {% if step_num == step %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    {{ step_num }}
+                </a>
+            {% endfor %}
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>Step {{ step }}: {{ step_title }}</h2>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Form fields will be replaced for each step -->
+                    {% include "checklist_steps/step_" + step + ".html" %}
+                    
+                    <!-- Form buttons -->
+                    <div class="d-flex justify-content-between mt-4">
+                        {% if not is_first_step %}
+                            <button type="submit" name="previous" class="btn btn-secondary">Previous</button>
+                        {% else %}
+                            <div></div>
+                        {% endif %}
+                        
+                        <div>
+                            <button type="submit" name="save_and_exit" class="btn btn-info">Save & Exit</button>
+                            <button type="submit" name="save_and_continue" class="btn btn-primary">
+                                {% if is_last_step %}Submit{% else %}Save & Continue{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

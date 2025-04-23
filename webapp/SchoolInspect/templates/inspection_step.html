@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+{% load custom_filters %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspection Step</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <link rel="stylesheet" href="{% static 'CSS/inspection_step.css' %}">
+    <style>
+        textarea {
+            resize: none !important;
+        }
+    </style>
+    <!-- Flatpickr CSS and JS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            flatpickr(".timepicker", {
+                enableTime: true,
+                noCalendar: true,
+                time_24hr: false, // Show 12-hour clock (with AM/PM)
+                dateFormat: "H:i", // Submit as 24-hour format (Django expects this)
+                altInput: true,
+                altFormat: "h:i K", // Display 12-hour with AM/PM
+                minuteIncrement: 15
+            });
+        });
+    </script>
+
+</head>
+<body>
+<div class="page-header">
+    <div class="container text-center">
+        <h2><i class="fas fa-clipboard-check me-2"></i>Inspection Step</h2>
+        <p class="subtitle">Complete your inspection with our step-by-step guided process</p>
+    </div>
+</div>
+    <a href="{% url 'inspection_form' %}" class="nav-button">
+        <i class="fas fa-file-alt"></i>
+        Inspection Form
+    </a>
+
+<div class="container">
+    <!-- Form Type Switcher -->
+    <div class="form-type-switcher card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-exchange-alt me-2"></i>Inspection Type</h5>
+            <!-- Converted from switch to button group for better visibility -->
+            <div class="btn-group" role="group" aria-label="Inspection Type Selector">
+                <button type="button" id="checklist-btn" 
+                        class="btn btn-sm {% if inspection_type == 'checklist' %}btn-success{% else %}btn-outline-secondary{% endif %}">
+                    <i class="fas fa-tasks me-1"></i> Checklist
+                </button>
+                <button type="button" id="inspection-btn" 
+                        class="btn btn-sm {% if inspection_type == 'inspection' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    <i class="fas fa-clipboard-list me-1"></i> Inspection
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-3 {% if inspection_type == 'checklist' %}bg-light border-success{% else %}bg-white{% endif %}">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-check-square me-2"></i>Checklist Mode
+                                {% if inspection_type == 'checklist' %}
+                                <span class="badge bg-success float-end">Active</span>
+                                {% endif %}
+                            </h6>
+                            <p class="card-text small">Simplified form with essential fields only for quick inspections.</p>
+                            <ul class="list-unstyled small text-muted">
+                                <li><i class="fas fa-check text-success me-1"></i> Faster to complete</li>
+                                <li><i class="fas fa-check text-success me-1"></i> Key fields only</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card mb-3 {% if inspection_type == 'inspection' %}bg-light border-primary{% else %}bg-white{% endif %}">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-clipboard-check me-2"></i>Inspection
+                                {% if inspection_type == 'inspection' %}
+                                <span class="badge bg-primary float-end">Active</span>
+                                {% endif %}
+                            </h6>
+                            <p class="card-text small">Comprehensive form with all available fields for detailed inspections.</p>
+                            <ul class="list-unstyled small text-muted">
+                                <li><i class="fas fa-check text-primary me-1"></i> Complete documentation</li>
+                                <li><i class="fas fa-check text-primary me-1"></i> All inspection fields</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-center mt-3">
+                <button id="switchFormType" class="btn btn-outline-primary">
+                    <i class="fas fa-sync-alt me-2"></i> Switch to 
+                    {% if inspection_type == 'checklist' %}Full Inspection{% else %}Checklist{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress indicator -->
+    <div class="progress-container">
+        <div class="nav-tabs-wrapper">
+            <ul class="nav nav-tabs inspection-tabs" id="inspectionTabs" role="tablist">
+                {% for step_num in step_numbers %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {% if step_num == step %}active{% endif %}" 
+                                id="tab-{{ step_num }}" 
+                                data-bs-toggle="tab" 
+                                data-section-id="{{ step_num }}"
+                                type="button" 
+                                role="tab" 
+                                aria-selected="{% if step_num == step %}true{% else %}false{% endif %}">
+                            {% if step_num == 1 %}
+                                <i class="fas fa-school me-2"></i>School
+                            {% elif step_num == 2 %}
+                                <i class="fas fa-truck me-2"></i>Delivery
+                            {% elif step_num == 3 %}
+                                <i class="fas fa-snowflake me-2"></i>Freezer
+                            {% elif step_num == 4 %}
+                                <i class="fas fa-prepare me-2"></i>Preparation
+                            {% elif step_num == 5 %}
+                                <i class="fas fa-utensils me-2"></i>Utensils
+                            {% elif step_num == 6 %}
+                                <i class="fas fa-blender me-2"></i>Machines
+                            {% elif step_num == 7 %}
+                                <i class="fas fa-concierge-bell me-2"></i>Serving
+                            {% elif step_num == 8 %}
+                                <i class="fas fa-warehouse me-2"></i>Storage
+                            {% elif step_num == 9 %}
+                                <i class="fas fa-toilet me-2"></i>Bathroom
+                            {% elif step_num == 10 %}
+                                <i class="fas fa-clipboard-list me-2"></i>Records
+                            {% elif step_num == 11 %}
+                                <i class="fas fa-chart-line me-2"></i>Evaluation
+                            {% elif step_num == 12 %}
+                                <i class="fas fa-chalkboard-teacher me-2"></i>Training
+                            {% elif step_num == 13 %}
+                                <i class="fas fa-user-friends me-2"></i>Staff
+                            {% elif step_num == 14 %}
+                                <i class="fas fa-biohazard me-2"></i>Contamination
+                            {% endif %}
+                        </button>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <!-- Form container -->
+    <div class="form-container">
+        <form method="post" enctype="multipart/form-data" class="form">
+            {% csrf_token %}
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-tasks me-2"></i>{{ step_title }}</h5>
+                    <small class="text-muted">
+                        Current Type: 
+                        <span class="badge {% if inspection_type == 'checklist' %}bg-success{% else %}bg-primary{% endif %}">
+                            {{ inspection_type|title }}
+                        </span>
+                    </small>
+                </div>
+                <div class="card-body">
+                    <!-- Display non-field errors for regular form -->
+                    {% if form and form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        {% for error in form.non_field_errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if machine_formset %}
+                        {{ machine_formset.management_form }}
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered staff-roster-table">
+                                <thead>
+                                    <tr>
+                                        <th width="35%">S/N</th>
+                                        <th width="25%">Type</th>
+                                        <th width="20%">Designation</th>
+                                        <th width="20%">Swab Test</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for machine_form in machine_formset %}
+                                        <tr class="staff-entry {% if forloop.counter > 5 %}d-none collapsed-row{% endif %}">
+                                            {% for field in machine_form.visible_fields %}
+                                                <td>
+                                                    {{ field }}
+                                                    {% if field.errors %}
+                                                        <div class="invalid-feedback d-block">
+                                                            {% for error in field.errors %}
+                                                                {{ error }}
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                </td>
+                                            {% endfor %}
+                                            {% for hidden in machine_form.hidden_fields %}
+                                                {{ hidden }}
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <button type="button" id="show-more-staff" class="btn btn-sm btn-info mt-2">
+                            <i class="fas fa-plus-circle"></i> Add More
+                        </button>
+                    {% endif %}
+                    <!-- Staff Roster Formset - Special case for step 11 -->
+                    {% if formset %}
+                        {{ formset.management_form }}
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered staff-roster-table">
+                                <thead>
+                                    <tr>
+                                        <th width="35%">Name</th>
+                                        <th width="25%">Position</th>
+                                        <th width="20%">Attendance</th>
+                                        <th width="20%">Halal Trained</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for staff_form in formset %}
+                                        <tr class="staff-entry {% if forloop.counter > 5 %}d-none collapsed-row{% endif %}">
+                                            {% for field in staff_form.visible_fields %}
+                                                <td>
+                                                    {{ field }}
+                                                    {% if field.errors %}
+                                                        <div class="invalid-feedback d-block">
+                                                            {% for error in field.errors %}
+                                                                {{ error }}
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                </td>
+                                            {% endfor %}
+                                            {% for hidden in staff_form.hidden_fields %}
+                                                {{ hidden }}
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <button type="button" id="show-more-staff" class="btn btn-sm btn-info mt-2">
+                            <i class="fas fa-plus-circle"></i> Add More Staff
+                        </button>
+                    {% endif %}
+                  
+                    <!-- Regular form fields - for non-staff-roster steps -->
+                    {% if form %}
+                        {% for field in form %}
+                            {% if field.name != "inspector_signature" and field.name != "school" %}
+                                <div class="form-group mb-4">
+                                    <label for="{{ field.id_for_label }}">
+                                        {% if field.field.required and field.widget.input_type != "hidden" %}
+                                            <span class="required-field">*</span>
+                                        {% endif %}
+                                        {{ field.label }}
+                                    </label>
+                                    {{ field }}
+                                    <span class="focus-border"></span>
+                                    {% if field.help_text %}
+                                        <small class="form-text text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>{{ field.help_text }}
+                                        </small>
+                                    {% endif %}
+                                    {% if field.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            <i class="fas fa-exclamation-circle me-1"></i>
+                                            {% for error in field.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                {{ field.as_hidden }}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    <!-- Utensils Formset - Special case for step 11 -->
+                    {% if utensils_formset %}
+                        {{ utensils_formset.management_form }}
+                        <label style="font-size: 0.95rem; margin-bottom: 0.5rem;font-weight: 600;">Utensils</label>
+                        <div class="table-responsive">
+                            <table class="table table-bordered staff-roster-table">
+                                <thead>
+                                    <tr>
+                                        <th width="35%">Quantity</th>
+                                        <th width="25%">Type</th>
+                                        <th width="20%">Designation</th>
+                                        <th width="20%">Swab Test</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for utensils_form in utensils_formset %}
+                                        <tr class="staff-entry {% if forloop.counter > 5 %}d-none collapsed-row{% endif %}">
+                                            {% for field in utensils_form.visible_fields %}
+                                                <td>
+                                                    {{ field }}
+                                                    {% if field.errors %}
+                                                        <div class="invalid-feedback d-block">
+                                                            {% for error in field.errors %}
+                                                                {{ error }}
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                </td>
+                                            {% endfor %}
+                                            {% for hidden in utensils_form.hidden_fields %}
+                                                {{ hidden }}
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <button type="button" id="show-more-staff" class="btn btn-sm btn-info mt-2">
+                            <i class="fas fa-plus-circle"></i> Add More Utensils
+                        </button>
+                    {% endif %} 
+                    <!-- Custom Signature Pad -->
+                    {% if form and 'inspector_signature' in form.fields %}
+                    <div class="form-group mb-4">
+                        <label for="signature-pad">
+                            {% if form.inspector_signature.field.required %}<span class="required-field">*</span>{% endif %}
+                            {{ form.inspector_signature.label }}
+                        </label>
+                        
+                        <div class="signature-container">
+                            <canvas id="signature-pad" class="signature-pad"></canvas>
+                            <!-- This is the hidden input where signature data will be stored -->
+                            <input type="hidden" name="signature-data" id="signature-data">
+                            {{ form.inspector_signature.as_hidden }}
+                        </div>
+                        
+                        <div class="signature-controls mt-2">
+                            <button type="button" class="btn btn-sm btn-secondary" id="clear-signature">
+                                <i class="fas fa-eraser"></i> Clear Signature
+                            </button>
+                            <!-- Upload button will be added via JavaScript -->
+                        </div>
+                        
+                        {% if form.inspector_signature.help_text %}
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle me-1"></i>{{ form.inspector_signature.help_text }}
+                        </small>
+                        {% endif %}
+                        
+                        {% if form.inspector_signature.errors %}
+                        <div class="invalid-feedback d-block">
+                            <i class="fas fa-exclamation-circle me-1"></i>
+                            {% for error in form.inspector_signature.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between flex-wrap">
+                {% if not is_first_step %}
+                <button type="submit" name="previous" class="btn btn-secondary mb-2 mb-md-0">
+                    <i class="fas fa-arrow-left"></i> Previous
+                </button>
+                {% else %}
+                <span></span>
+                {% endif %}
+                
+                <div class="button-container">
+                    <button type="submit" name="save_and_exit" class="btn btn-warning">
+                        <i class="fas fa-save"></i> Save & Exit
+                    </button>
+                    
+                    {% if is_last_step %}
+                    <button type="submit" name="save_and_continue" class="btn btn-success">
+                        <i class="fas fa-check"></i> Complete Inspection
+                    </button>
+                    {% else %}
+                    <button type="submit" name="save_and_continue" class="btn btn-primary">
+                        Save & Continue <i class="fas fa-arrow-right"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const userEmailMap = {{ user_email_map|safe }};
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const userSelect = document.getElementById('id_inspector_name');
+        const emailInput = document.getElementById('id_inspector_email');
+
+        if (userSelect && emailInput) {
+            userSelect.addEventListener('change', function () {
+                const selectedUserId = userSelect.value;
+                emailInput.value = userEmailMap[selectedUserId] || '';
+            });
+        }
+    });
+</script>
+<script>
+// Add this to your existing JS code
+document.addEventListener('DOMContentLoaded', function() {
+    const showMoreBtn = document.getElementById('show-more-staff');
+    if (showMoreBtn) {
+        showMoreBtn.addEventListener('click', function() {
+            const hiddenRows = document.querySelectorAll('.staff-entry.d-none');
+            // Show next 5 hidden rows
+            for (let i = 0; i < 1 && i < hiddenRows.length; i++) {
+                hiddenRows[i].classList.remove('d-none');
+            }
+            
+            // Hide the button if all rows are visible
+            if (document.querySelectorAll('.staff-entry.d-none').length === 0) {
+                showMoreBtn.style.display = 'none';
+            }
+        });
+    }   
+});
+
+</script>
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if signature pad canvas exists
+    const canvas = document.getElementById('signature-pad');
+    if (canvas) {
+        // Initialize signature pad
+        const signaturePad = new SignaturePad(canvas, {
+            backgroundColor: 'rgb(255, 255, 255)',
+            penColor: 'rgb(0, 0, 0)'
+        });
+        
+        // Clear button functionality
+        document.getElementById('clear-signature').addEventListener('click', function() {
+            signaturePad.clear();
+            document.getElementById('signature-data').value = '';
+            
+            // Show the canvas again and hide preview if exists
+            canvas.style.display = 'block';
+            const previewImg = document.getElementById('signature-preview');
+            if (previewImg) {
+                previewImg.style.display = 'none';
+            }
+        });
+        
+        // Create an upload button
+        const signatureContainer = canvas.closest('.signature-container');
+        const uploadButton = document.createElement('button');
+        uploadButton.type = 'button';
+        uploadButton.className = 'btn btn-sm btn-primary ms-2';
+        uploadButton.innerHTML = '<i class="fas fa-upload"></i> Upload Signature';
+        
+        // Add the upload button to the signature controls div
+        document.querySelector('.signature-controls').appendChild(uploadButton);
+        
+        // Create a preview image element (initially hidden)
+        const previewImg = document.createElement('img');
+        previewImg.id = 'signature-preview';
+        previewImg.className = 'signature-preview';
+        previewImg.style.display = 'none';
+        previewImg.style.maxWidth = '100%';
+        previewImg.style.border = '1px solid #ccc';
+        signatureContainer.appendChild(previewImg);
+        
+        // Upload button functionality
+        uploadButton.addEventListener('click', function() {
+            if (signaturePad.isEmpty()) {
+                alert('Please provide a signature first.');
+                return;
+            }
+            
+            // Get signature data URL
+            const signatureData = signaturePad.toDataURL();
+            
+            // Set the hidden input value
+            document.getElementById('signature-data').value = signatureData;
+            
+            // Display signature as an image
+            previewImg.src = signatureData;
+            previewImg.style.display = 'block';
+            canvas.style.display = 'none'; // Hide the canvas
+            
+            // Optional: Add a change signature button
+            const changeButton = document.getElementById('change-signature');
+            if (!changeButton) {
+                const newChangeButton = document.createElement('button');
+                newChangeButton.id = 'change-signature';
+                newChangeButton.type = 'button';
+                newChangeButton.className = 'btn btn-sm btn-outline-secondary ms-2';
+                newChangeButton.innerHTML = '<i class="fas fa-edit"></i> Edit Signature';
+                newChangeButton.addEventListener('click', function() {
+                    canvas.style.display = 'block';
+                    previewImg.style.display = 'none';
+                });
+                document.querySelector('.signature-controls').appendChild(newChangeButton);
+            }
+        });
+        
+        // Handle form submission - ensure signature data is already in the hidden field
+        const form = canvas.closest('form');
+        form.addEventListener('submit', function(event) {
+            // We don't need to do anything here as the signature is already
+            // stored in the hidden field when the user clicks "Upload Signature"
+        });
+        
+        // Resize canvas to maintain ratio on window resize
+        window.addEventListener('resize', resizeCanvas);
+        
+        function resizeCanvas() {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            canvas.getContext("2d").scale(ratio, ratio);
+            signaturePad.clear(); // Clear the canvas
+        }
+        
+        // Initial resize
+        resizeCanvas();
+    }
+
+        
+        // Add animation class to form groups and make them visible
+        const formGroups = document.querySelectorAll('.form-group');
+        formGroups.forEach((group, index) => {
+            setTimeout(() => {
+                group.style.opacity = '1';
+                group.style.transform = 'translateY(0)';
+            }, 100 * index);
+        });
+        
+        // Focus effect for inputs
+        const inputs = document.querySelectorAll('.form-control, .form-select');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                const formGroup = this.closest('.form-group');
+                const focusBorder = formGroup.querySelector('.focus-border');
+                if (focusBorder) {
+                    focusBorder.style.width = '100%';
+                }
+            });
+            
+            input.addEventListener('blur', function() {
+                const formGroup = this.closest('.form-group');
+                const focusBorder = formGroup.querySelector('.focus-border');
+                if (focusBorder) {
+                    focusBorder.style.width = '0';
+                }
+            });
+        });
+
+        // Ensure proper display on mobile
+        function checkViewport() {
+            if (window.innerWidth <= 767) {
+                document.querySelectorAll('.d-flex.justify-content-between').forEach(flex => {
+                    if (!flex.classList.contains('mobile-adjusted')) {
+                        flex.classList.add('mobile-adjusted');
+                    }
+                });
+            } else {
+                document.querySelectorAll('.mobile-adjusted').forEach(flex => {
+                    flex.classList.remove('mobile-adjusted');
+                });
+            }
+        }
+
+        // Run once on load and on resize
+        checkViewport();
+        window.addEventListener('resize', checkViewport);
+        
+        // Form Type Button Handlers
+        const checklistBtn = document.getElementById('checklist-btn');
+        const inspectionBtn = document.getElementById('inspection-btn');
+        const switchFormTypeBtn = document.getElementById('switchFormType');
+        
+        if (checklistBtn && inspectionBtn) {
+            checklistBtn.addEventListener('click', function() {
+                if ('{{ inspection_type }}' !== 'checklist') {
+                    switchInspectionType('checklist');
+                }
+            });
+            
+            inspectionBtn.addEventListener('click', function() {
+                if ('{{ inspection_type }}' !== 'inspection') {
+                    switchInspectionType('inspection');
+                }
+            });
+        }
+        
+        if (switchFormTypeBtn) {
+            switchFormTypeBtn.addEventListener('click', function() {
+                const currentType = '{{ inspection_type }}';
+                const newType = currentType === 'checklist' ? 'inspection' : 'checklist';
+                switchInspectionType(newType);
+            });
+        }
+        
+        function switchInspectionType(newType) {
+            // Store in session via AJAX
+            fetch("{% url 'set_inspection_type' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ inspection_type: newType }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload the page to show the new form
+                    window.location.reload();
+                } else {
+                    alert('Failed to switch form type. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while switching form types.');
+            });
+        }                
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tab navigation functionality
+        const tabButtons = document.querySelectorAll('.inspection-tabs .nav-link');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Get the section ID from the data attribute
+                const sectionId = this.getAttribute('data-section-id');
+                
+                // AJAX call to change the active section
+                fetch("{% url 'change_section' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ section_id: sectionId }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Redirect to the appropriate URL for the selected section
+                        window.location.href = data.redirect_url;
+                    } else {
+                        console.error('Failed to change section:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            });
+        });
+        
+        // Auto-scroll to active tab on page load
+        const activeTab = document.querySelector('.inspection-tabs .nav-link.active');
+        if (activeTab) {
+            setTimeout(() => {
+                activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }, 200);
+        }
+    });
+</script>
+<script>
+    const completeInspectionBtn = document.querySelector('button[name="save_and_continue"].btn-success');
+    
+    if (completeInspectionBtn) {
+        const form = completeInspectionBtn.closest('form');
+        
+        // Create Bootstrap modal
+        const modalHTML = `
+            <div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Confirmation Required</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to complete this inspection?</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-1"></i> No, Cancel</button>
+                            <button type="button" id="confirmYes" class="btn btn-success"><i class="fas fa-check me-1"></i> Yes, Complete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Insert modal HTML
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Get modal instance
+        const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+        
+        // Handle button click
+        completeInspectionBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            modal.show();
+        });
+        
+        // Handle Yes button click
+        // Handle Yes button click
+        document.getElementById('confirmYes').addEventListener('click', function() {
+            modal.hide();
+            
+            // Create a hidden input to represent the clicked button
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'save_and_continue';
+            hiddenInput.value = 'true';
+            form.appendChild(hiddenInput);
+            
+            // Submit the form
+            form.submit();
+        });
+    }
+</script>  
+</body>
+</html>

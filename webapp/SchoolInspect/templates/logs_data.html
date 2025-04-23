@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Login Logs</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+    <link rel="stylesheet" href="{% static 'CSS/logs_data.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+a{
+  text-decoration:none;
+}
+</style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-title">
+                <h1>User Login Logs</h1>
+                <p>Monitor user activity and session durations</p>
+            </div>
+            <!-- Add Log Modal -->
+            <div id="addLogModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title"><i class="fas fa-plus-circle"></i> Add Log</h3>
+                        <span class="close">&times;</span>
+                    </div>
+                    <form id="addLogForm" method="post" action="{% url 'logs_data' %}">
+                        {% csrf_token %}
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label class="form-label">Inspector Name</label>
+                                {{ form.user }}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Login Time</label>
+                                {{ form.login_time }}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Logout Time</label>
+                                {{ form.logout_time }}
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" id="closeLogModal" class="btn btn-outline">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Add Log</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <a href="{% url 'salary_calculation' %}" class="btn btn-primary">
+                    <i class="fas fa-wallet-alt"></i> Salary Calculation
+                </a>
+                <button id="addLogBtn" class="btn btn-outline">
+                    <i class="fas fa-plus-circle"></i> Add Logs
+                </button>
+
+                <button id="filterBtn" class="btn btn-outline">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+                <button id="exportBtn" class="btn btn-outline">
+                    <i class="fas fa-download"></i> Export
+                </button>
+                <a href="{% url 'logs_data' %}" id="refreshBtn" class="btn btn-primary">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </a>
+            </div>
+        </header>
+        
+        <div class="table-container">
+            <table id="logsTable">
+                <thead>
+                    <tr>
+                        <th><i class="fas fa-user"></i> Inspector Name</th>
+                        <th><i class="fas fa-sign-in-alt"></i> Login Time</th>
+                        <th><i class="fas fa-sign-out-alt"></i> Logout Time</th>
+                        <th><i class="fas fa-clock"></i> Hours Logged</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                        <tr>
+                            <td data-label="Inspector Name">
+                                <i class="fas fa-user-circle"></i> {{ log.user.username }}
+                            </td>
+                            <td data-label="Login Time">
+                                <i class="fas fa-calendar-alt"></i> {{ log.login_time|date:"M d, Y h:i A" }}
+                            </td>
+                            <td data-label="Logout Time">
+                                {% if log.logout_time %}
+                                    <i class="fas fa-calendar-check"></i> {{ log.logout_time|date:"M d, Y h:i A" }}
+                                {% else %}
+                                    <span class="status status-active">
+                                        <i class="fas fa-circle"></i> Active Now
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Hours Logged">
+                                {% if log.logout_time %}
+                                    <span class="duration">
+                                        {{ log.duration|default:"--" }}
+                                    </span>
+                                {% else %}
+                                    <span class="status status-active">In Progress</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr id="emptyRow">
+                            <td colspan="4">
+                                <div class="empty-state">
+                                    <i class="fas fa-clipboard-list"></i>
+                                    <p>No login logs available at this time.</p>
+                                    <small>User activity will appear here when sessions are recorded.</small>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <footer>
+            <div>Last updated: <span id="lastUpdated">{% now "F j, Y h:i A" %}</span></div>
+            <div>Displaying <span id="resultCount">{{ logs|length }}</span> results</div>
+        </footer>
+    </div>
+    
+    <!-- Filter Modal -->
+    <div id="filterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-filter"></i> Filter Logs</h3>
+                <span class="close">&times;</span>
+            </div>
+            <form id="filterForm" method="get" action="{% url 'logs_data' %}">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label" for="username">Inspector Name</label>
+                        <input type="text" class="form-control" id="username" name="username" 
+                               placeholder="Enter inspector name" value="{{ request.GET.username|default:'' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="date_range">Date Range</label>
+                        <select class="form-control" id="date_range" name="date_range">
+                            <option value="all" {% if request.GET.date_range == 'all' or not request.GET.date_range %}selected{% endif %}>All Time</option>
+                            <option value="today" {% if request.GET.date_range == 'today' %}selected{% endif %}>Today</option>
+                            <option value="yesterday" {% if request.GET.date_range == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                            <option value="week" {% if request.GET.date_range == 'week' %}selected{% endif %}>Last 7 Days</option>
+                            <option value="month" {% if request.GET.date_range == 'month' %}selected{% endif %}>Last 30 Days</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="status">Status</label>
+                        <select class="form-control" id="status" name="status">
+                            <option value="all" {% if request.GET.status == 'all' or not request.GET.status %}selected{% endif %}>All</option>
+                            <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active Only</option>
+                            <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed Only</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="{% url 'logs_data' %}" id="resetFilterBtn" class="btn btn-outline">Reset</a>
+                    <button type="submit" id="applyFilterBtn" class="btn btn-primary">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <div class="toast-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="toast-message">Action completed successfully</div>
+    </div>
+    
+    <script>
+        // DOM Elements
+        const filterBtn = document.getElementById('filterBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const filterModal = document.getElementById('filterModal');
+        const closeBtn = document.querySelector('.close');
+        const toast = document.getElementById('toast');
+        
+        // Show toast notification
+        function showToast(message) {
+            const toastMessage = document.querySelector('.toast-message');
+            toastMessage.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Calculate the duration between two dates
+        function calculateDuration(start, end) {
+            if (!start || !end) return null;
+            
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            
+            // Calculate difference in milliseconds
+            const diff = endDate - startDate;
+            
+            // Convert to hours and minutes
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            return `${hours}h ${minutes}m`;
+        }
+        
+        // Export data to CSV
+        function exportToCSV() {
+            // Header row
+            let csv = 'Inspector Name,Login Time,Logout Time,Hours Logged\n';
+            
+            // Get all rows from the table
+            const rows = document.querySelectorAll('#logsTable tbody tr:not(#emptyRow)');
+            
+            if (rows.length === 0) {
+                showToast('No data to export');
+                return;
+            }
+            
+            // Process each row
+            rows.forEach(row => {
+                const columns = row.querySelectorAll('td');
+                if (columns.length === 4) {
+                    // Get the text content for each cell, clean it up
+                    const username = columns[0].textContent.trim().replace(/\s+/g, ' ');
+                    const loginTime = columns[1].textContent.trim().replace(/\s+/g, ' ');
+                    const logoutTime = columns[2].textContent.trim().replace(/\s+/g, ' ');
+                    const duration = columns[3].textContent.trim().replace(/\s+/g, ' ');
+                    
+                    // Add to CSV, properly escaped
+                    csv += `"${username}","${loginTime}","${logoutTime}","${duration}"\n`;
+                }
+            });
+            
+            // Create download link
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const date = new Date().toISOString().split('T')[0];
+            link.setAttribute('download', `user_login_logs_${date}.csv`);
+            document.body.appendChild(link);
+            
+            // Trigger download
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast('Login logs exported to CSV');
+        }
+        
+        // Event Listeners
+        filterBtn.addEventListener('click', () => {
+            filterModal.style.display = 'block';
+        });
+        
+        closeBtn.addEventListener('click', () => {
+            filterModal.style.display = 'none';
+        });
+        
+        window.addEventListener('click', (event) => {
+            if (event.target === filterModal) {
+                filterModal.style.display = 'none';
+            }
+        });
+        
+        exportBtn.addEventListener('click', exportToCSV);
+        
+        // Show message from URL if present
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const message = urlParams.get('message');
+            if (message) {
+                showToast(decodeURIComponent(message));
+            }
+        });
+    </script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const addLogModal = document.getElementById('addLogModal');
+        const addLogBtn = document.getElementById('addLogBtn');
+        const closeLogModal = document.getElementById('closeLogModal');
+
+        addLogBtn.addEventListener('click', () => {
+            addLogModal.style.display = 'block';
+        });
+
+        closeLogModal.addEventListener('click', () => {
+            addLogModal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === addLogModal) {
+                addLogModal.style.display = 'none';
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
